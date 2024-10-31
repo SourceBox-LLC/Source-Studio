@@ -1,5 +1,5 @@
 import streamlit as st
-from api import generate_image, generate_video
+from api import generate_image, generate_video, upscale_image, download_content
 import os
 
 # Set up the Streamlit app
@@ -67,7 +67,12 @@ if st.session_state.current_edit:
     )
     
     if st.sidebar.button("Upscale"):
-        st.sidebar.write("Upscaling image...")  # Placeholder for upscaling functionality
+        upscaled_result = upscale_image(st.session_state.current_edit)
+        if upscaled_result.startswith("error"):
+            st.sidebar.error(upscaled_result)
+        else:
+            st.image(upscaled_result, caption="Upscaled Image")
+            st.session_state.history.append((f"Upscaled {st.session_state.current_edit}", upscaled_result))
     if st.sidebar.button("Regenerate"):
         st.sidebar.write("Regenerating image...")  # Placeholder for regenerating functionality
     if st.sidebar.button("Image to Video"):

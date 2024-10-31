@@ -119,15 +119,6 @@ def generate_image(prompt, generator):
 
 
 
-def upscale_image(image_path):
-    pass
-
-def download_content(content):
-    pass
-
-
-
-
 def generate_video(image_path):
     try:
         logging.info("Starting video generation process")
@@ -212,6 +203,82 @@ def generate_video(image_path):
 
 
 
+def upscale_image(image_path):
+    logging.debug("Received request to upscale image")
+
+    if not image_path:
+        logging.error("Image path not provided in the request")
+        return "error: Image path is required"
+
+    try:
+        # Construct the full path to the image
+        full_image_path = os.path.join('static', image_path)
+        logging.debug(f"Full image path: {full_image_path}")
+
+        # Open the image file
+        with open(full_image_path, 'rb') as image_file:
+            logging.info("Creating prediction for image upscaling")
+            prediction = replicate.predictions.create(
+                version=version,
+                input={
+                    "hdr": 0,
+                    "image": image_file,
+                    "steps": 20,
+                    "prompt": "UHD 4k",
+                    "scheduler": "DDIM",
+                    "creativity": 0.25,
+                    "guess_mode": False,
+                    "resolution": "original",
+                    "resemblance": 0.75,
+                    "guidance_scale": 7,
+                    "negative_prompt": "teeth, tooth, open mouth, longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality, mutant"
+                }
+            )
+            logging.debug("Waiting for prediction to complete")
+            prediction.wait()
+
+            if prediction.status == 'succeeded' and isinstance(prediction.output, list) and len(prediction.output) > 0:
+                output_url = prediction.output[0]
+                logging.info(f"Prediction succeeded, output URL: {output_url}")
+
+                # Download the upscaled image
+                upscaled_image_response = requests.get(output_url)
+                upscaled_image_response.raise_for_status()
+
+                # Save the upscaled image to the static directory
+                upscaled_image_name = f"upscaled_image_{uuid.uuid4().hex}.png"
+                upscaled_image_path = os.path.join('static', upscaled_image_name)
+                with open(upscaled_image_path, 'wb') as upscaled_image_file:
+                    upscaled_image_file.write(upscaled_image_response.content)
+
+                logging.info(f"Upscaled image saved successfully at {upscaled_image_path}")
+
+                # Return the path of the saved upscaled image
+                return upscaled_image_path
+            else:
+                logging.error(f"Prediction failed with status: {prediction.status}, detail: {prediction.error}")
+                return f"error: Prediction failed with status: {prediction.status}"
+
+    except FileNotFoundError:
+        logging.error(f"Image file not found at path: {full_image_path}")
+        return "error: Image file not found"
+
+    except replicate.exceptions.ReplicateError as e:
+        logging.error(f"Replicate API error during prediction: {e}")
+        return "error: An error occurred with the Replicate API"
+
+    except requests.exceptions.RequestException as e:
+        logging.error(f"HTTP request error: {e}")
+        return "error: An error occurred while making an HTTP request"
+
+    except Exception as e:
+        logging.error(f"Unexpected error during prediction: {e}")
+        return "error: An unexpected error occurred"
+
+
+
+def download_content(content):
+    pass
 
 
 if __name__ == "__main__":
