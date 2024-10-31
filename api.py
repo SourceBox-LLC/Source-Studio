@@ -7,6 +7,7 @@ import string
 import uuid
 from PIL import Image
 import time
+import replicate
 
 
 load_dotenv()
@@ -115,6 +116,100 @@ def generate_image(prompt, generator):
     except Exception as e:
         logging.error(f"Unexpected error: {e}")
         return str(e)
+
+
+
+def upscale_image(image_path):
+    pass
+
+def download_content(content):
+    pass
+
+
+
+
+def generate_video(image_path):
+    try:
+        logging.info("Starting video generation process")
+
+        api_token = os.getenv("REPLICATE_API_TOKEN")
+        if not api_token:
+            logging.error("API Token not found. Please check your .env file.")
+            return "error: API Token not found"
+
+        # Get the model and version
+        logging.debug("Fetching model and version")
+        try:
+            model = replicate.models.get("sunfjun/stable-video-diffusion")
+            version = model.versions.get("d68b6e09eedbac7a49e3d8644999d93579c386a083768235cabca88796d70d82")
+        except Exception as e:
+            logging.error(f"Error fetching model or version: {e}")
+            return "error: Error fetching model or version"
+
+        if not image_path:
+            logging.error("No image path provided")
+            return "error: Image path is required"
+
+        # Construct the full path to the image
+        full_image_path = os.path.join('static', image_path)
+        logging.debug(f"Full image path: {full_image_path}")
+
+        # Open the image file
+        with open(full_image_path, 'rb') as image_file:
+            logging.info(f"Creating prediction for image file: {full_image_path}")
+            try:
+                # Create a prediction
+                prediction = replicate.predictions.create(
+                    version=version,
+                    input={
+                        "input_image": image_file,
+                        "cond_aug": 0.05,
+                        "decoding_t": 14,
+                        "video_length": "14_frames_with_svd",
+                        "sizing_strategy": "maintain_aspect_ratio",
+                        "motion_bucket_id": 127,
+                        "frames_per_second": 6
+                    }
+                )
+            except Exception as e:
+                logging.error(f"Error creating prediction: {e}")
+                return "error: Error creating prediction"
+
+            # Wait for the prediction to complete
+            logging.info("Waiting for prediction to complete")
+            prediction.wait()
+
+            # Check the status and get the output
+            if prediction.status == 'succeeded':
+                output_url = prediction.output
+                logging.info(f"Prediction succeeded, video URL: {output_url}")
+
+                # Download the video
+                video_response = requests.get(output_url)
+                video_response.raise_for_status()
+
+                # Save the video to the static directory
+                video_name = f"video_{uuid.uuid4().hex}.mp4"
+                video_path = os.path.join('static', video_name)
+                with open(video_path, 'wb') as video_file:
+                    video_file.write(video_response.content)
+
+                logging.info(f"Video saved successfully at {video_path}")
+
+                return video_path  # Return the path of the saved video
+            else:
+                logging.error(f"Prediction failed with status: {prediction.status}, detail: {prediction.error}")
+                return f"error: Prediction failed with status: {prediction.status}"
+
+    except replicate.exceptions.ReplicateError as e:
+        logging.error(f"Replicate API error during video generation: {e}")
+        return "error: An error occurred with the Replicate API"
+
+    except Exception as e:
+        logging.error(f"Unexpected error during video generation: {e}")
+        return "error: An unexpected error occurred"
+
+
 
 
 

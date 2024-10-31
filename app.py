@@ -1,5 +1,5 @@
 import streamlit as st
-from api import generate_image
+from api import generate_image, generate_video
 import os
 
 # Set up the Streamlit app
@@ -71,7 +71,12 @@ if st.session_state.current_edit:
     if st.sidebar.button("Regenerate"):
         st.sidebar.write("Regenerating image...")  # Placeholder for regenerating functionality
     if st.sidebar.button("Image to Video"):
-        st.sidebar.write("Generating video from image...")  # Placeholder for image to video functionality
+        video_result = generate_video(st.session_state.current_edit)
+        if video_result.startswith("error"):
+            st.sidebar.error(video_result)
+        else:
+            st.video(video_result)
+            st.session_state.history.append((f"Video from {st.session_state.current_edit}", video_result))
     if st.sidebar.button("Edit Prompt"):
         st.sidebar.write("Editing prompt...")  # Placeholder for prompt editing functionality
     if st.sidebar.button("Download"):
