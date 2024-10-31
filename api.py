@@ -6,6 +6,7 @@ import random
 import string
 import uuid
 from PIL import Image
+import time
 
 
 load_dotenv()
@@ -31,21 +32,27 @@ def random_sig():
 
 
 
-def query_image(prompt, api_url):
+def query_image(prompt, api_url, retries=3, delay=5):
     """
     Generic function to query a Hugging Face API for generating images based on a prompt.
     The function sends a POST request to the specified API URL with the prompt data.
     Returns the binary content of the generated image or None if an error occurred.
     """
-    try:
-        logging.info(f"Querying {api_url} with prompt: {prompt}")
-        response = requests.post(api_url, headers=hf_headers, json={"inputs": prompt})
-        response.raise_for_status()  # Raise an error for bad responses (4xx, 5xx)
-        logging.info(f"Received response with status code {response.status_code}")
-        return response.content  # Return the image content as bytes
-    except requests.exceptions.RequestException as e:
-        logging.info(f"Error querying {api_url}: {e}")
-        return None
+    for attempt in range(retries):
+        try:
+            logging.info(f"Querying {api_url} with prompt: {prompt}")
+            response = requests.post(api_url, headers=hf_headers, json={"inputs": prompt})
+            response.raise_for_status()  # Raise an error for bad responses (4xx, 5xx)
+            logging.info(f"Received response with status code {response.status_code}")
+            return response.content  # Return the image content as bytes
+        except requests.exceptions.RequestException as e:
+            logging.info(f"Error querying {api_url}: {e}")
+            if attempt < retries - 1:
+                logging.info(f"Retrying in {delay} seconds...")
+                time.sleep(delay)
+            else:
+                logging.error("Max retries reached. Failed to generate image.")
+                return None
 
 
 def query_flux_image(prompt):
@@ -100,6 +107,7 @@ def generate_image(prompt, generator):
             image = Image.open(io.BytesIO(image_bytes))
             image.save(image_path)
             logging.info(f"Image saved successfully: {image_name}")
+            return image_path  # Return the path of the saved image
         except Exception as e:
             logging.error(f"Error saving image: {e}")
             return "error: Error saving image"
