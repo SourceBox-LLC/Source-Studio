@@ -5,6 +5,10 @@ from api import generate_image
 st.title("Source Studio")
 st.write("Generate images using different AI models by providing a prompt and selecting a generator.")
 
+# Add an empty sidebar
+st.sidebar.title("Edit Images")
+st.sidebar.write("This is an empty sidebar. Add controls here.")
+
 # Initialize session state for conversation history
 if 'history' not in st.session_state:
     st.session_state.history = []
@@ -34,3 +38,4 @@ st.write("### Conversation History")
 for i, (past_prompt, image_path) in enumerate(st.session_state.history):
     st.write(f"Prompt {i+1}: {past_prompt}")
     st.image(image_path, caption=f"Generated Image {i+1}")
+    st.button(f"Edit Image {i+1}", key=f"edit_{i}")
