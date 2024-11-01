@@ -52,11 +52,17 @@ if st.session_state.current_edit:
     # Display editing options for the selected image
     st.sidebar.title(f"Edit {st.session_state.current_edit}")
     
+    # Extract the prompt associated with the current edit
+    current_prompt, current_image_path = next(
+        ((p, img) for p, img in st.session_state.history if img.split('/')[-1] == st.session_state.current_edit), 
+        (None, None)
+    )
+
     # Custom CSS for buttons
     st.markdown(
         """
         <style>
-        .stButton > button {
+        .stButton > button, .stDownloadButton > button {
             width: 90%;
             margin: 5px auto;
             display: block;
@@ -73,8 +79,21 @@ if st.session_state.current_edit:
         else:
             st.image(upscaled_result, caption="Upscaled Image")
             st.session_state.history.append((f"Upscaled {st.session_state.current_edit}", upscaled_result))
+
     if st.sidebar.button("Regenerate"):
-        st.sidebar.write("Regenerating image...")  # Placeholder for regenerating functionality
+        if current_prompt:
+            st.sidebar.write("Regenerating image...")
+            new_image_path = generate_image(current_prompt, generator)  # Use the existing generator
+            if new_image_path.startswith("error"):
+                st.sidebar.error(new_image_path)
+
+            else:
+                st.image(new_image_path, caption="Regenerated Image")
+                # Update history with the regenerated image
+                st.session_state.history.append((current_prompt, new_image_path))
+                # Update current edit with new image path
+                st.session_state.current_edit = new_image_path.split('/')[-1]
+
     if st.sidebar.button("Image to Video"):
         video_result = generate_video(st.session_state.current_edit)
         if video_result.startswith("error"):
@@ -82,10 +101,23 @@ if st.session_state.current_edit:
         else:
             st.video(video_result)
             st.session_state.history.append((f"Video from {st.session_state.current_edit}", video_result))
-    if st.sidebar.button("Edit Prompt"):
-        st.sidebar.write("Editing prompt...")  # Placeholder for prompt editing functionality
-    if st.sidebar.button("Download"):
-        st.sidebar.write("Downloading image...")  # Placeholder for downloading functionality
+
+
+
+
+    # Download button functionality
+    image_path = next((img[1] for img in st.session_state.history if img[1].split('/')[-1] == st.session_state.current_edit), None)
+    if image_path:
+        with open(image_path, "rb") as file:
+            st.sidebar.download_button(
+                label="Download Image",
+                data=file,
+                file_name=st.session_state.current_edit,
+                mime="image/png"
+            )
+
+
+
 else:
     # Default sidebar content when no image is selected
     st.sidebar.title("Edit Images")

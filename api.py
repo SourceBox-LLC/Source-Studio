@@ -198,7 +198,7 @@ def generate_video(image_path):
 
     except Exception as e:
         logging.error(f"Unexpected error during video generation: {e}")
-        return "error: An unexpected error occurred"
+        return f"error: An unexpected error occurred: {e}"
 
 
 
@@ -273,7 +273,10 @@ def upscale_image(image_path):
 
     except Exception as e:
         logging.error(f"Unexpected error during prediction: {e}")
-        return "error: An unexpected error occurred"
+        return f"error: An unexpected error occurred: {e}"
+
+
+
 
 
 
