@@ -142,7 +142,7 @@ def generate_video(image_path):
             return "error: Image path is required"
 
         # Construct the full path to the image
-        full_image_path = os.path.join('static', image_path)
+        full_image_path = image_path
         logging.debug(f"Full image path: {full_image_path}")
 
         # Open the image file
@@ -211,15 +211,16 @@ def upscale_image(image_path):
         return "error: Image path is required"
 
     try:
-        # Construct the full path to the image
-        full_image_path = os.path.join('static', image_path)
+        # Use the full path directly from the input
+        full_image_path = image_path
         logging.debug(f"Full image path: {full_image_path}")
 
         # Open the image file
         with open(full_image_path, 'rb') as image_file:
             logging.info("Creating prediction for image upscaling")
-            prediction = replicate.predictions.create(
-                version=version,
+            # Correctly use the replicate API
+            prediction = replicate.run(
+                "batouresearch/magic-image-refiner:507ddf6f977a7e30e46c0daefd30de7d563c72322f9e4cf7cbac52ef0f667b13",
                 input={
                     "hdr": 0,
                     "image": image_file,
@@ -234,11 +235,10 @@ def upscale_image(image_path):
                     "negative_prompt": "teeth, tooth, open mouth, longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality, mutant"
                 }
             )
-            logging.debug("Waiting for prediction to complete")
-            prediction.wait()
 
-            if prediction.status == 'succeeded' and isinstance(prediction.output, list) and len(prediction.output) > 0:
-                output_url = prediction.output[0]
+            # Check if the prediction is successful
+            if isinstance(prediction, list) and len(prediction) > 0:
+                output_url = prediction[0]
                 logging.info(f"Prediction succeeded, output URL: {output_url}")
 
                 # Download the upscaled image
@@ -256,8 +256,8 @@ def upscale_image(image_path):
                 # Return the path of the saved upscaled image
                 return upscaled_image_path
             else:
-                logging.error(f"Prediction failed with status: {prediction.status}, detail: {prediction.error}")
-                return f"error: Prediction failed with status: {prediction.status}"
+                logging.error("Prediction failed or returned no output")
+                return "error: Prediction failed or returned no output"
 
     except FileNotFoundError:
         logging.error(f"Image file not found at path: {full_image_path}")
@@ -275,13 +275,6 @@ def upscale_image(image_path):
         logging.error(f"Unexpected error during prediction: {e}")
         return f"error: An unexpected error occurred: {e}"
 
-
-
-
-
-
-def download_content(content):
-    pass
 
 
 if __name__ == "__main__":
