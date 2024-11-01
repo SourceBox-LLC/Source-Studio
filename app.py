@@ -103,7 +103,9 @@ if st.session_state.current_edit:
             st.sidebar.error(upscaled_result)
         else:
             st.image(upscaled_result, caption="Upscaled Image")
-            st.session_state.history.append((f"Upscaled {st.session_state.current_edit}", upscaled_result))
+            # Check for duplicates before appending
+            if (f"Upscaled {st.session_state.current_edit}", upscaled_result) not in st.session_state.history:
+                st.session_state.history.append((f"Upscaled {st.session_state.current_edit}", upscaled_result))
 
     if st.sidebar.button("Regenerate"):
         if current_prompt:
@@ -112,8 +114,9 @@ if st.session_state.current_edit:
                 st.sidebar.error(new_image_path)
             else:
                 st.image(new_image_path, caption="Regenerated Image")
-                # Update history with the regenerated image
-                st.session_state.history.append((current_prompt, new_image_path))
+                # Check for duplicates before appending
+                if (current_prompt, new_image_path) not in st.session_state.history:
+                    st.session_state.history.append((current_prompt, new_image_path))
                 # Update current edit with new image path
                 st.session_state.current_edit = os.path.basename(new_image_path)
 
@@ -123,7 +126,9 @@ if st.session_state.current_edit:
             st.sidebar.error(video_result)
         else:
             st.video(video_result)
-            st.session_state.history.append((f"Video from {st.session_state.current_edit}", video_result))
+            # Check for duplicates before appending
+            if (f"Video from {st.session_state.current_edit}", video_result) not in st.session_state.history:
+                st.session_state.history.append((f"Video from {st.session_state.current_edit}", video_result))
 
     # Download button functionality
     if current_image_path:
