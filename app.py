@@ -25,6 +25,10 @@ if 'current_edit' not in st.session_state:
     st.session_state.current_edit = None
     logger.info("Initialized current edit session state.")
 
+# Initialize session state for uploaded file
+if 'uploaded_file_processed' not in st.session_state:
+    st.session_state.uploaded_file_processed = False
+    logger.info("Initialized uploaded file processed session state.")
 # Input for the prompt
 prompt = st.chat_input("Say something")
 logger.info(f"Received prompt: {prompt}")
@@ -52,15 +56,16 @@ if prompt:
 # Upload an image
 uploaded_file = st.file_uploader("Upload an image", type=["png", "jpg", "jpeg", "webp"])
 
-if uploaded_file is not None:
+if uploaded_file is not None and not st.session_state.uploaded_file_processed:
     uploaded_image_name = f"uploaded_image_{uuid.uuid4().hex}.png"
     uploaded_image_path = os.path.join('static', uploaded_image_name)
-
+    
     with open(uploaded_image_path, "wb") as f:
         f.write(uploaded_file.getbuffer())
     logger.info(f"Uploaded image saved at path: {uploaded_image_path}")
     
     st.session_state.history.append(("Uploaded Image", uploaded_image_path))
+    st.session_state.uploaded_file_processed = True
     st.success("Image uploaded successfully!")
 
 # Display the conversation history
