@@ -4,6 +4,7 @@ import os
 import uuid
 import logging
 from PIL import Image
+from session_manager import SessionManager
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -29,6 +30,20 @@ if 'current_edit' not in st.session_state:
 if 'uploaded_file_processed' not in st.session_state:
     st.session_state.uploaded_file_processed = False
     logger.info("Initialized uploaded file processed session state.")
+
+# Initialize session manager
+session_manager = SessionManager()
+
+# Initialize session state
+if 'session_id' not in st.session_state:
+    st.session_state.session_id = uuid.uuid4().hex[:8]
+    
+# Get session directory
+session_dir = session_manager.get_session_dir(st.session_state.session_id)
+
+# Clean up expired sessions on app start
+session_manager.cleanup_expired_sessions()
+
 # Input for the prompt
 prompt = st.chat_input("Say something")
 logger.info(f"Received prompt: {prompt}")
@@ -43,7 +58,7 @@ logger.info(f"Generator selected: {generator}")
 # Automatically generate the image when a prompt is entered
 if prompt:
     st.write(f"Prompt: {prompt}")
-    result = generate_image(prompt, generator)
+    result = generate_image(prompt, generator, session_dir)
     logger.info(f"Generated image with prompt '{prompt}' using generator '{generator}'")
 
     if result.startswith("error"):
@@ -57,7 +72,7 @@ if prompt:
 uploaded_file = st.file_uploader("Upload an image", type=["png", "jpg", "jpeg", "webp"])
 
 if uploaded_file is not None and not st.session_state.uploaded_file_processed:
-    uploaded_image_name = f"uploaded_image_{uuid.uuid4().hex}.png"
+    uploaded_image_name = f"uploaded_image_{uuid.uuid4().hex[:8]}.png"
     uploaded_image_path = os.path.join('static', uploaded_image_name)
     
     with open(uploaded_image_path, "wb") as f:
@@ -101,7 +116,7 @@ if st.session_state.current_edit:
     logger.info(f"Editing image: {current_image_path} with prompt: '{current_prompt}'")
 
     if st.sidebar.button("Upscale"):
-        upscaled_result = upscale_image(current_image_path)
+        upscaled_result = upscale_image(current_image_path, session_dir)
         if upscaled_result.startswith("error"):
             st.sidebar.error(upscaled_result)
             logger.error(f"Error upscaling image: {upscaled_result}")
@@ -113,7 +128,7 @@ if st.session_state.current_edit:
 
     if st.sidebar.button("Regenerate"):
         if current_prompt:
-            new_image_path = generate_image(current_prompt, generator)
+            new_image_path = generate_image(current_prompt, generator, session_dir)
             if new_image_path.startswith("error"):
                 st.sidebar.error(new_image_path)
                 logger.error(f"Error regenerating image: {new_image_path}")
@@ -125,7 +140,7 @@ if st.session_state.current_edit:
                 st.session_state.current_edit = os.path.basename(new_image_path)
 
     if st.sidebar.button("Image to Video"):
-        video_result = generate_video(current_image_path)
+        video_result = generate_video(current_image_path, session_dir)
         if video_result.startswith("error"):
             st.sidebar.error(video_result)
             logger.error(f"Error generating video: {video_result}")

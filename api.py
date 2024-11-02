@@ -70,7 +70,7 @@ def query_phantasma_anime_image(prompt):
 
 
 
-def generate_image(prompt, generator):
+def generate_image(prompt, generator, session_dir):
     try:
         logging.info("Received request to generate image")
         logging.info(f"Prompt: {prompt}, Generator: {generator}")
@@ -100,8 +100,8 @@ def generate_image(prompt, generator):
             logging.error("Failed to generate image from the selected API.")
             return "error: Failed to generate image from the selected API."
 
-        image_name = f"{generator}_image_{uuid.uuid4().hex}.png"
-        image_path = f"static/{image_name}"
+        image_name = f"{generator}_{uuid.uuid4().hex[:8]}.png"
+        image_path = os.path.join(session_dir, image_name)
         logging.debug(f"Saving image to: {image_path}")
 
         try:
@@ -119,7 +119,7 @@ def generate_image(prompt, generator):
 
 
 
-def generate_video(image_path):
+def generate_video(image_path, session_dir):
     try:
         logging.info("Starting video generation process")
 
@@ -180,8 +180,8 @@ def generate_video(image_path):
                 video_response.raise_for_status()
 
                 # Save the video to the static directory
-                video_name = f"video_{uuid.uuid4().hex}.mp4"
-                video_path = os.path.join('static', video_name)
+                video_name = f"video_{uuid.uuid4().hex[:8]}.mp4"
+                video_path = os.path.join(session_dir, video_name)
                 with open(video_path, 'wb') as video_file:
                     video_file.write(video_response.content)
 
@@ -203,7 +203,7 @@ def generate_video(image_path):
 
 
 
-def upscale_image(image_path):
+def upscale_image(image_path, session_dir):
     logging.debug("Received request to upscale image")
 
     if not image_path:
@@ -246,8 +246,8 @@ def upscale_image(image_path):
                 upscaled_image_response.raise_for_status()
 
                 # Save the upscaled image to the static directory
-                upscaled_image_name = f"upscaled_image_{uuid.uuid4().hex}.png"
-                upscaled_image_path = os.path.join('static', upscaled_image_name)
+                upscaled_image_name = f"upscaled_{uuid.uuid4().hex[:8]}.png"
+                upscaled_image_path = os.path.join(session_dir, upscaled_image_name)
                 with open(upscaled_image_path, 'wb') as upscaled_image_file:
                     upscaled_image_file.write(upscaled_image_response.content)
 
@@ -278,4 +278,4 @@ def upscale_image(image_path):
 
 
 if __name__ == "__main__":
-    generate_image("a cat on the moon with a banana", "flux")
+    generate_image("a cat on the moon with a banana", "flux", "session_dir")
